@@ -1,4 +1,5 @@
 use std::ops::{Add, Div, Mul, Sub};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Vec3 {
@@ -45,6 +46,11 @@ impl Vec3 {
     pub fn unit_vector(&self) -> Vec3 {
         let len = self.length();
         *self / len
+    }
+
+    // 反射ベクトルの計算
+    pub fn reflect(&self, normal: &Vec3) -> Vec3 {
+        *self - *normal * 2.0 * self.dot(normal)
     }
 }
 
@@ -107,6 +113,19 @@ impl Mul<Vec3> for f64 {
     }
 }
 
+// Vec3同士の乗算（アダマール積）
+impl Mul<Vec3> for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, other: Vec3) -> Vec3 {
+        Vec3 {
+            x: self.x * other.x,
+            y: self.y * other.y,
+            z: self.z * other.z,
+        }
+    }
+}
+
 impl Div<f64> for Vec3 {
     type Output = Vec3;
 
@@ -139,10 +158,51 @@ impl Ray {
     }
 }
 
-#[derive(Clone, Copy)]
+pub struct ScatterInfo {
+    pub attenuation: Color,
+    pub scattered: Ray,
+}
+
+// 金属マテリアル
+#[derive(Clone)]
+pub struct Metal {
+    albedo: Color,
+    fuzz: f64,
+}
+
+impl Metal {
+    pub fn new(albedo: Color, fuzz: f64) -> Self {
+        Metal {
+            albedo,
+            fuzz: if fuzz < 1.0 { fuzz } else { 1.0 },
+        }
+    }
+}
+
+impl Material for Metal {
+    fn scatter(&self, ray_in: &Ray, rec: &HitRecord) -> Option<ScatterInfo> {
+        let reflected = ray_in.direction().unit_vector().reflect(&rec.normal);
+        let scattered = Ray::new(rec.point, reflected + random_unit_vector() * self.fuzz);
+
+        if scattered.direction().dot(&rec.normal) > 0.0 {
+            Some(ScatterInfo {
+                scattered,
+                attenuation: self.albedo,
+            })
+        } else {
+            None
+        }
+    }
+}
+
+pub trait Material: Send + Sync + 'static {
+    fn scatter(&self, ray_in: &Ray, rec: &HitRecord) -> Option<ScatterInfo>;
+}
+
 pub struct HitRecord {
     pub point: Vec3,
     pub normal: Vec3,
+    pub material: Arc<dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }
@@ -158,18 +218,62 @@ impl HitRecord {
     }
 }
 
-pub trait Hittable {
+pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+}
+
+// ランダムな単位ベクトルを生成
+pub fn random_unit_vector() -> Vec3 {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+
+    let a = rng.gen_range(0.0..2.0 * std::f64::consts::PI);
+    let z = rng.gen_range(-1.0..1.0);
+    let r = ((1.0_f64 - z * z) as f64).sqrt();
+
+    Vec3::new(r * a.cos(), r * a.sin(), z)
+}
+
+#[derive(Clone)]
+pub struct Lambertian {
+    albedo: Color,
+}
+
+impl Lambertian {
+    pub fn new(albedo: Color) -> Self {
+        Lambertian { albedo }
+    }
+}
+
+impl Material for Lambertian {
+    fn scatter(&self, _ray_in: &Ray, rec: &HitRecord) -> Option<ScatterInfo> {
+        let mut scatter_direction = rec.normal + random_unit_vector();
+
+        // 散乱方向がゼロベクトルに近い場合は法線方向を使用
+        if scatter_direction.length_squared() < 1e-8 {
+            scatter_direction = rec.normal;
+        }
+
+        Some(ScatterInfo {
+            scattered: Ray::new(rec.point, scatter_direction),
+            attenuation: self.albedo,
+        })
+    }
 }
 
 pub struct Sphere {
     center: Vec3,
     radius: f64,
+    material: Arc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f64) -> Self {
-        Sphere { center, radius }
+    pub fn new(center: Vec3, radius: f64, material: Arc<dyn Material>) -> Self {
+        Sphere {
+            center,
+            radius,
+            material,
+        }
     }
 }
 
@@ -201,6 +305,7 @@ impl Hittable for Sphere {
         let mut rec = HitRecord {
             point,
             normal: outward_normal,
+            material: Arc::clone(&self.material),
             t,
             front_face: false,
         };
@@ -236,9 +341,15 @@ impl Hittable for HittableList {
         let mut hit_anything = None;
 
         for object in &self.objects {
-            if let Some(hit) = object.hit(ray, t_min, closest_so_far) {
-                closest_so_far = hit.t;
-                hit_anything = Some(hit);
+            if let Some(hit_record) = object.hit(ray, t_min, closest_so_far) {
+                closest_so_far = hit_record.t;
+                hit_anything = Some(HitRecord {
+                    point: hit_record.point,
+                    normal: hit_record.normal,
+                    material: Arc::clone(&hit_record.material),
+                    t: hit_record.t,
+                    front_face: hit_record.front_face,
+                });
             }
         }
 
