@@ -1,3 +1,4 @@
+use crate::aabb::AABB;
 use crate::ray::Ray;
 use crate::vec3::{Color, Vec3};
 use std::sync::Arc;
@@ -32,6 +33,25 @@ pub trait Material: Send + Sync + 'static {
 
 pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+
+    /// オブジェクトのバウンディングボックスを計算
+    ///
+    /// # Arguments
+    ///
+    /// * `time0` - 時間範囲の開始（モーションブラー用）
+    /// * `time1` - 時間範囲の終了（モーションブラー用）
+    fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB>;
+}
+
+// Arc<dyn Hittable>に対するHittableトレイトの実装
+impl Hittable for Arc<dyn Hittable> {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        (**self).hit(ray, t_min, t_max)
+    }
+
+    fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
+        (**self).bounding_box(time0, time1)
+    }
 }
 
 pub fn random_unit_vector() -> Vec3 {

@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use crate::aabb::AABB;
+use crate::bvh::BVHNode;
 use crate::ray::Ray;
 use crate::types::{HitRecord, Hittable};
 
 pub struct HittableList {
-    objects: Vec<Box<dyn Hittable>>,
+    objects: Vec<Arc<dyn Hittable>>,
 }
 
 impl HittableList {
@@ -14,12 +16,24 @@ impl HittableList {
         }
     }
 
-    pub fn add(&mut self, object: Box<dyn Hittable>) {
+    pub fn add(&mut self, object: Arc<dyn Hittable>) {
         self.objects.push(object);
     }
 
     pub fn clear(&mut self) {
         self.objects.clear();
+    }
+
+    /// BVHを構築してシーンを最適化
+    pub fn optimize(&self) -> Arc<dyn Hittable> {
+        if self.objects.is_empty() {
+            panic!("空のシーンは最適化できません");
+        }
+
+        // オブジェクトのクローンを作成
+        let objects: Vec<Arc<dyn Hittable>> = self.objects.iter().map(Arc::clone).collect();
+
+        Arc::new(BVHNode::new(objects, 0.0, 1.0))
     }
 }
 
@@ -42,5 +56,27 @@ impl Hittable for HittableList {
         }
 
         hit_anything
+    }
+
+    fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
+        if self.objects.is_empty() {
+            return None;
+        }
+
+        let mut result = None;
+
+        for object in &self.objects {
+            if let Some(bbox) = object.bounding_box(time0, time1) {
+                result = Some(if let Some(result_box) = result {
+                    AABB::surrounding_box(&result_box, &bbox)
+                } else {
+                    bbox
+                });
+            } else {
+                return None;
+            }
+        }
+
+        result
     }
 }

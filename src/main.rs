@@ -1,3 +1,5 @@
+mod aabb;
+mod bvh;
 mod camera;
 mod image;
 mod ray;
@@ -6,6 +8,7 @@ mod vec3;
 
 use camera::Camera;
 use rand::prelude::*;
+use rayon::prelude::*;
 
 mod material {
     pub mod dielectric;
@@ -91,96 +94,98 @@ fn main() {
     let mut world = HittableList::new();
 
     // 地面の追加
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Vec3::new(0.0, -100.5, -1.0),
         100.0,
         material_ground,
     )));
 
     // 中央の拡散球
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Vec3::new(0.0, 0.0, -1.0),
         0.5,
         material_center,
     )));
 
     // ガラス球（二重球で中空ガラス球を表現）
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Vec3::new(-1.0, 0.0, -1.0),
         0.5,
         glass.clone(),
     ))); // 外側のガラス球
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Vec3::new(-1.0, 0.0, -1.0),
         -0.45, // 負の半径で内側の球を作成
         glass,
     ))); // 内側のガラス球
 
     // 金属球体の配置（後方に配置）
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Vec3::new(-2.0, 0.0, -2.0),
         0.5,
         mirror,
     ))); // 鏡面の球
 
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Vec3::new(-0.7, 0.0, -2.0),
         0.5,
         brushed_aluminum,
     ))); // ブラシドアルミの球
 
-    world.add(Box::new(Sphere::new(Vec3::new(0.7, 0.0, -2.0), 0.5, gold))); // 金の球
+    world.add(Arc::new(Sphere::new(Vec3::new(0.7, 0.0, -2.0), 0.5, gold))); // 金の球
 
-    world.add(Box::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         Vec3::new(2.0, 0.0, -2.0),
         0.5,
         metallic_plastic,
     ))); // メタリックプラスチックの球
 
+    // BVHを構築してシーンを最適化
+    let world = world.optimize();
+
     // カメラの設定
-    let lookfrom = Vec3::new(0.0, 2.5, 5.0); // より遠くから、より高い位置
-    let lookat = Vec3::new(0.0, 0.0, -1.0); // シーンの中心を見る
+    let lookfrom = Vec3::new(0.0, 2.5, 5.0);
+    let lookat = Vec3::new(0.0, 0.0, -1.0);
     let vup = Vec3::new(0.0, 1.0, 0.0);
-
-    // シーンの主要なオブジェクトまでの距離に焦点を合わせる
     let focus_dist = Some((lookfrom - lookat).length());
+    let aperture = Camera::aperture_from_f_number(16.0);
 
-    // より広い被写界深度のために絞りを絞る
-    let aperture = Camera::aperture_from_f_number(16.0); // f/16でより深い被写界深度
-
-    let camera = camera::Camera::new(
+    let camera = Arc::new(camera::Camera::new(
         lookfrom,
         lookat,
         vup,
-        40.0, // より広い視野角
+        40.0,
         aspect_ratio,
         aperture,
         focus_dist,
-    );
+    ));
 
     // 画像の生成
-    let mut pixels = Vec::with_capacity((image_width * image_height) as usize);
+    let pixels: Vec<Color> = (0..image_height)
+        .into_par_iter()
+        .rev()
+        .flat_map(|j| {
+            println!("Remaining scanlines: {}", j);
+            let camera = Arc::clone(&camera);
+            let world = Arc::clone(&world);
+            (0..image_width).into_par_iter().map(move |i| {
+                let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+                let mut rng = rand::thread_rng();
 
-    for j in (0..image_height).rev() {
-        println!("Remaining scanlines: {}", j);
-        for i in 0..image_width {
-            let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-            let mut rng = rand::thread_rng();
+                // 各ピクセルに対して複数回サンプリング
+                for _ in 0..samples_per_pixel {
+                    let u = (i as f64 + rng.gen_range(0.0..1.0)) / (image_width - 1) as f64;
+                    let v = (j as f64 + rng.gen_range(0.0..1.0)) / (image_height - 1) as f64;
 
-            // 各ピクセルに対して複数回サンプリング
-            for _ in 0..samples_per_pixel {
-                let u = (i as f64 + rng.gen_range(0.0..1.0)) / (image_width - 1) as f64;
-                let v = (j as f64 + rng.gen_range(0.0..1.0)) / (image_height - 1) as f64;
+                    let ray = camera.get_ray(u, v);
+                    pixel_color = pixel_color + ray_color(&ray, &world, max_depth);
+                }
 
-                let ray = camera.get_ray(u, v);
-                pixel_color = pixel_color + ray_color(&ray, &world, max_depth);
-            }
-
-            // サンプリング結果の平均を取る
-            pixel_color = pixel_color * (1.0 / samples_per_pixel as f64);
-            pixels.push(pixel_color);
-        }
-    }
+                // サンプリング結果の平均を取る
+                pixel_color * (1.0 / samples_per_pixel as f64)
+            })
+        })
+        .collect();
 
     println!("Writing image to file...");
     if let Err(e) = image::write_ppm("output.ppm", image_width, image_height, &pixels) {

@@ -22,6 +22,17 @@ impl Vec3 {
         self.z
     }
 
+    /// インデックスによる要素へのアクセス
+    /// 0: x, 1: y, 2: z
+    pub fn get(&self, index: usize) -> f64 {
+        match index {
+            0 => self.x,
+            1 => self.y,
+            2 => self.z,
+            _ => panic!("Vec3のインデックスは0-2の範囲である必要があります"),
+        }
+    }
+
     pub fn length(&self) -> f64 {
         self.length_squared().sqrt()
     }
