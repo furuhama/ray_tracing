@@ -20,10 +20,6 @@ impl HittableList {
         self.objects.push(object);
     }
 
-    pub fn clear(&mut self) {
-        self.objects.clear();
-    }
-
     /// BVHを構築してシーンを最適化
     pub fn optimize(&self) -> Arc<dyn Hittable> {
         if self.objects.is_empty() {

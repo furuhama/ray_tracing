@@ -90,13 +90,4 @@ impl Camera {
             self.lower_left_corner + self.horizontal * s + self.vertical * t - self.origin - offset,
         )
     }
-
-    /// F値から絞り値を計算
-    ///
-    /// # Arguments
-    ///
-    /// * `f_number` - F値（例：f/1.8なら1.8）
-    pub fn aperture_from_f_number(f_number: f64) -> f64 {
-        1.0 / f_number
-    }
 }

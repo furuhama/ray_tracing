@@ -22,7 +22,7 @@ use ray::Ray;
 use rayon::prelude::*;
 use scene::{MaterialConfig, Scene, ShapeConfig};
 use types::{Hittable, Material};
-use vec3_glam::{ColorGlam, Vec3Glam};
+use vec3_glam::ColorGlam;
 
 fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> ColorGlam {
     // 反射回数が制限を超えた場合は黒を返す
