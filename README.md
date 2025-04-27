@@ -4,12 +4,15 @@ This is a ray tracing renderer implemented in Rust, based on "Ray Tracing in One
 
 ## Features
 
-- Basic ray tracing with reflection and shadow support
+- Basic ray tracing with reflection, refraction, and shadow support
 - Multiple materials:
   - Lambertian (diffuse) material for matte surfaces
   - Metal material with adjustable fuzziness for reflective surfaces
+  - Dielectric material for glass-like surfaces
 - Scene composition with multiple objects
+- Bounding Volume Hierarchy (BVH) for efficient ray-object intersection
 - PPM image output
+- Camera with adjustable parameters (position, look-at, field of view)
 
 ## Usage
 
@@ -23,20 +26,22 @@ This will generate an `output.ppm` file containing the rendered image.
 
 ## Project Structure
 
-- `src/lib.rs`: Core ray tracing implementation
-  - Vector operations
-  - Ray and intersection calculations
-  - Material system
-  - Scene objects
-- `src/main.rs`: Scene setup and rendering pipeline
-
-## Scene Configuration
-
-The current scene includes:
-- A large ground sphere with yellow diffuse material
-- A center sphere with reddish diffuse material
-- A left sphere with reflective metal material (low fuzz)
-- A right sphere with reflective metal material (high fuzz)
+- `src/`
+  - `main.rs`: Scene setup and rendering pipeline
+  - `types.rs`: Common type definitions
+  - `ray.rs`: Ray representation
+  - `vec3_glam.rs`: Vector operations using glam
+  - `camera.rs`: Camera implementation
+  - `image.rs`: Image output handling
+  - `aabb.rs`: Axis-Aligned Bounding Box implementation
+  - `bvh.rs`: Bounding Volume Hierarchy implementation
+  - `material/`
+    - `lambertian.rs`: Diffuse material
+    - `metal.rs`: Metallic material
+    - `dielectric.rs`: Glass-like material
+  - `object/`
+    - `sphere.rs`: Sphere primitive
+    - `list.rs`: Object list container
 
 ## Implementation Details
 
@@ -52,12 +57,20 @@ The current scene includes:
      - albedo (color absorption)
      - fuzz (surface roughness)
 
+3. **Dielectric**
+   - Implements glass-like behavior
+   - Features:
+     - Refraction using Snell's law
+     - Fresnel effect
+     - Controllable refractive index
+
 ### Core Components
 
-- `Vec3`: 3D vector operations
+- `Vec3`: 3D vector operations (using glam)
 - `Ray`: Ray representation and calculations
-- `Hittable`: Trait for objects that can be hit by rays
-- `Material`: Trait for surface materials
+- `Camera`: Configurable camera system
+- `AABB`: Axis-Aligned Bounding Box for optimization
+- `BVH`: Bounding Volume Hierarchy for efficient scene traversal
 - `Sphere`: Basic geometric primitive
 - `HittableList`: Scene object container
 
