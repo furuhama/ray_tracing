@@ -1,4 +1,6 @@
-use ray_tracing::{image, Color, Hittable, HittableList, Lambertian, Metal, Ray, Sphere, Vec3};
+use ray_tracing::{
+    Color, Dielectric, Hittable, HittableList, Lambertian, Metal, Ray, Sphere, Vec3, image,
+};
 use std::sync::Arc;
 
 fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> Color {
@@ -45,7 +47,7 @@ fn main() {
     // マテリアルの設定
     let material_ground = Arc::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
     let material_center = Arc::new(Lambertian::new(Color::new(0.7, 0.3, 0.3)));
-    let material_left = Arc::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    let material_left = Arc::new(Dielectric::new(1.5)); // ガラス（屈折率1.5）
     let material_right = Arc::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
 
     // オブジェクトの追加
@@ -62,8 +64,13 @@ fn main() {
     world.add(Box::new(Sphere::new(
         Vec3::new(-1.0, 0.0, -1.0),
         0.5,
+        material_left.clone(),
+    ))); // 外側のガラス球
+    world.add(Box::new(Sphere::new(
+        Vec3::new(-1.0, 0.0, -1.0),
+        -0.45, // 負の半径で内側の球を作成
         material_left,
-    ))); // 左の球
+    ))); // 内側のガラス球
     world.add(Box::new(Sphere::new(
         Vec3::new(1.0, 0.0, -1.0),
         0.5,
