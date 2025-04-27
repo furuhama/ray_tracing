@@ -1,17 +1,17 @@
 use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::vec3_glam::Vec3Glam;
 use std::f64::consts::PI;
 
 use rand::prelude::*;
 
 pub struct Camera {
-    origin: Vec3,
-    lower_left_corner: Vec3,
-    horizontal: Vec3,
-    vertical: Vec3,
-    u: Vec3,          // カメラ座標系のx軸
-    v: Vec3,          // カメラ座標系のy軸
-    w: Vec3,          // カメラ座標系のz軸
+    origin: Vec3Glam,
+    lower_left_corner: Vec3Glam,
+    horizontal: Vec3Glam,
+    vertical: Vec3Glam,
+    u: Vec3Glam,      // カメラ座標系のx軸
+    v: Vec3Glam,      // カメラ座標系のy軸
+    w: Vec3Glam,      // カメラ座標系のz軸
     lens_radius: f64, // レンズの半径
 }
 
@@ -28,9 +28,9 @@ impl Camera {
     /// * `aperture` - 絞り値（F値の逆数）
     /// * `focus_dist` - 焦点距離（オプション。Noneの場合は注視点までの距離を使用）
     pub fn new(
-        lookfrom: Vec3,
-        lookat: Vec3,
-        vup: Vec3,
+        lookfrom: Vec3Glam,
+        lookat: Vec3Glam,
+        vup: Vec3Glam,
         vfov: f64,
         aspect_ratio: f64,
         aperture: f64,
@@ -65,10 +65,10 @@ impl Camera {
     }
 
     /// レンズ上のランダムな点を生成
-    pub fn random_in_unit_disk() -> Vec3 {
+    pub fn random_in_unit_disk() -> Vec3Glam {
         let mut rng = rand::thread_rng();
         loop {
-            let p = Vec3::new(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0), 0.0);
+            let p = Vec3Glam::new(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0), 0.0);
             if p.length_squared() < 1.0 {
                 return p;
             }

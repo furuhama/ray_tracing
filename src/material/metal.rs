@@ -1,13 +1,15 @@
 use crate::ray::Ray;
 use crate::types::{HitRecord, Material, ScatterInfo, random_unit_vector};
-use crate::vec3::Color;
+use crate::vec3_glam::Vec3Glam;
+
+type ColorGlam = Vec3Glam;
 
 #[derive(Clone)]
 pub struct Metal {
-    base_color: Color, // 金属の基本色
-    reflectivity: f64, // 反射率（0.0 ~ 1.0）
-    metallicness: f64, // 金属性（0.0 ~ 1.0）
-    roughness: f64,    // 表面の粗さ（0.0 ~ 1.0）
+    base_color: ColorGlam, // 金属の基本色
+    reflectivity: f64,     // 反射率（0.0 ~ 1.0）
+    metallicness: f64,     // 金属性（0.0 ~ 1.0）
+    roughness: f64,        // 表面の粗さ（0.0 ~ 1.0）
 }
 
 impl Metal {
@@ -19,13 +21,13 @@ impl Metal {
     /// * `roughness` - 表面の粗さ（0.0 ~ 1.0）
     /// * `reflectivity` - 反射率（0.0 ~ 1.0、デフォルト0.9）
     /// * `metallicness` - 金属性（0.0 ~ 1.0、デフォルト1.0）
-    pub fn new(base_color: Color, roughness: f64) -> Self {
+    pub fn new(base_color: ColorGlam, roughness: f64) -> Self {
         Self::with_params(base_color, roughness, 0.9, 1.0)
     }
 
     /// すべてのパラメータを指定してメタルマテリアルを作成
     pub fn with_params(
-        base_color: Color,
+        base_color: ColorGlam,
         roughness: f64,
         reflectivity: f64,
         metallicness: f64,
@@ -45,8 +47,8 @@ impl Metal {
     }
 
     /// 金属/非金属の混合色を計算
-    fn mix_color(&self, pure_metal: Color) -> Color {
-        let dielectric = Color::new(0.04, 0.04, 0.04); // 非金属の反射色
+    fn mix_color(&self, pure_metal: ColorGlam) -> ColorGlam {
+        let dielectric = ColorGlam::new(0.04, 0.04, 0.04); // 非金属の反射色
         dielectric * (1.0 - self.metallicness) + pure_metal * self.metallicness
     }
 }

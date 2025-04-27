@@ -1,7 +1,9 @@
 use crate::ray::Ray;
 use crate::types::{HitRecord, Material, ScatterInfo};
-use crate::vec3::Color;
+use crate::vec3_glam::Vec3Glam;
 use rand::Rng;
+
+type ColorGlam = Vec3Glam;
 
 #[derive(Clone)]
 pub struct Dielectric {
@@ -48,7 +50,7 @@ impl Material for Dielectric {
 
         Some(ScatterInfo {
             scattered: Ray::new(rec.point, direction),
-            attenuation: Color::new(1.0, 1.0, 1.0),
+            attenuation: ColorGlam::new(1.0, 1.0, 1.0),
         })
     }
 }

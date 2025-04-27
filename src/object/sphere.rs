@@ -3,16 +3,16 @@ use std::sync::Arc;
 use crate::aabb::AABB;
 use crate::ray::Ray;
 use crate::types::{HitRecord, Hittable, Material};
-use crate::vec3::Vec3;
+use crate::vec3_glam::Vec3Glam;
 
 pub struct Sphere {
-    center: Vec3,
+    center: Vec3Glam,
     radius: f64,
     material: Arc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f64, material: Arc<dyn Material>) -> Self {
+    pub fn new(center: Vec3Glam, radius: f64, material: Arc<dyn Material>) -> Self {
         Sphere {
             center,
             radius,
@@ -59,7 +59,7 @@ impl Hittable for Sphere {
     }
 
     fn bounding_box(&self, _time0: f64, _time1: f64) -> Option<AABB> {
-        let radius_vec = Vec3::new(self.radius, self.radius, self.radius);
+        let radius_vec = Vec3Glam::new(self.radius, self.radius, self.radius);
         Some(AABB::new(
             self.center - radius_vec,
             self.center + radius_vec,

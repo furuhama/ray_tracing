@@ -1,14 +1,16 @@
 use crate::ray::Ray;
 use crate::types::{HitRecord, Material, ScatterInfo, random_unit_vector};
-use crate::vec3::Color;
+use crate::vec3_glam::Vec3Glam;
+
+type ColorGlam = Vec3Glam;
 
 #[derive(Clone)]
 pub struct Lambertian {
-    albedo: Color,
+    albedo: ColorGlam,
 }
 
 impl Lambertian {
-    pub fn new(albedo: Color) -> Self {
+    pub fn new(albedo: ColorGlam) -> Self {
         Lambertian { albedo }
     }
 }

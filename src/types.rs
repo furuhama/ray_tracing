@@ -1,23 +1,25 @@
 use crate::aabb::AABB;
 use crate::ray::Ray;
-use crate::vec3::{Color, Vec3};
+use crate::vec3_glam::Vec3Glam;
 use std::sync::Arc;
 
+type ColorGlam = Vec3Glam;
+
 pub struct ScatterInfo {
-    pub attenuation: Color,
+    pub attenuation: ColorGlam,
     pub scattered: Ray,
 }
 
 pub struct HitRecord {
-    pub point: Vec3,
-    pub normal: Vec3,
+    pub point: Vec3Glam,
+    pub normal: Vec3Glam,
     pub material: Arc<dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }
 
 impl HitRecord {
-    pub fn set_face_normal(&mut self, ray: &Ray, outward_normal: Vec3) {
+    pub fn set_face_normal(&mut self, ray: &Ray, outward_normal: Vec3Glam) {
         self.front_face = ray.direction().dot(&outward_normal) < 0.0;
         self.normal = if self.front_face {
             outward_normal
@@ -54,7 +56,7 @@ impl Hittable for Arc<dyn Hittable> {
     }
 }
 
-pub fn random_unit_vector() -> Vec3 {
+pub fn random_unit_vector() -> Vec3Glam {
     use rand::Rng;
     let mut rng = rand::thread_rng();
 
@@ -62,5 +64,5 @@ pub fn random_unit_vector() -> Vec3 {
     let z = rng.gen_range(-1.0..1.0);
     let r = ((1.0_f64 - z * z) as f64).sqrt();
 
-    Vec3::new(r * a.cos(), r * a.sin(), z)
+    Vec3Glam::new(r * a.cos(), r * a.sin(), z)
 }

@@ -1,23 +1,23 @@
 use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::vec3_glam::Vec3Glam;
 
 /// 軸並行境界ボックス（Axis-Aligned Bounding Box）
 #[derive(Clone, Copy)]
 pub struct AABB {
-    minimum: Vec3, // ボックスの最小点
-    maximum: Vec3, // ボックスの最大点
+    minimum: Vec3Glam, // ボックスの最小点
+    maximum: Vec3Glam, // ボックスの最大点
 }
 
 impl AABB {
-    pub fn new(minimum: Vec3, maximum: Vec3) -> Self {
+    pub fn new(minimum: Vec3Glam, maximum: Vec3Glam) -> Self {
         AABB { minimum, maximum }
     }
 
-    pub fn min(&self) -> Vec3 {
+    pub fn min(&self) -> Vec3Glam {
         self.minimum
     }
 
-    pub fn max(&self) -> Vec3 {
+    pub fn max(&self) -> Vec3Glam {
         self.maximum
     }
 
@@ -49,13 +49,13 @@ impl AABB {
 
     /// 2つのAABBを含む最小のAABBを生成
     pub fn surrounding_box(box0: &AABB, box1: &AABB) -> AABB {
-        let small = Vec3::new(
+        let small = Vec3Glam::new(
             box0.min().x().min(box1.min().x()),
             box0.min().y().min(box1.min().y()),
             box0.min().z().min(box1.min().z()),
         );
 
-        let big = Vec3::new(
+        let big = Vec3Glam::new(
             box0.max().x().max(box1.max().x()),
             box0.max().y().max(box1.max().y()),
             box0.max().z().max(box1.max().z()),

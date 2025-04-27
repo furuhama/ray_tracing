@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::{self, Write};
 
-use crate::vec3::Color;
+use crate::vec3_glam::ColorGlam;
 
-pub fn write_ppm(path: &str, width: u32, height: u32, pixels: &[Color]) -> io::Result<()> {
+pub fn write_ppm(path: &str, width: u32, height: u32, pixels: &[ColorGlam]) -> io::Result<()> {
     let mut file = File::create(path)?;
 
     // PPMヘッダーの書き込み
