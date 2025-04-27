@@ -4,6 +4,7 @@ mod ray;
 mod types;
 mod vec3;
 
+use camera::Camera;
 use rand::prelude::*;
 
 mod material {
@@ -53,7 +54,25 @@ fn main() {
     let max_depth = 50; // 反射の最大回数
 
     // カメラの設定
-    let camera = camera::Camera::new(aspect_ratio);
+    let lookfrom = Vec3::new(3.0, 3.0, 2.0);
+    let lookat = Vec3::new(0.0, 0.0, -1.0);
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+
+    // シーンの主要なオブジェクトまでの距離に焦点を合わせる
+    let focus_dist = Some((lookfrom - lookat).length()); // 自動的に主要な被写体までの距離を計算
+
+    // 絞りを絞って被写界深度を深くする
+    let aperture = Camera::aperture_from_f_number(8.0); // f/8.0に変更（より小さな開口）
+
+    let camera = camera::Camera::new(
+        lookfrom,     // カメラの位置
+        lookat,       // 注視点
+        vup,          // 上方向ベクトル
+        20.0,         // 視野角（度）
+        aspect_ratio, // アスペクト比
+        aperture,     // 絞り値
+        focus_dist,   // 焦点距離
+    );
 
     // シーンの作成
     let mut world = HittableList::new();
