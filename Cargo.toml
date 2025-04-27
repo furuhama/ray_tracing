@@ -12,3 +12,5 @@ indicatif = "0.17.11"
 rand = "0.8.5"
 rayon = "1.10.0"
 glam = { version = "0.25", features = ["fast-math"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"

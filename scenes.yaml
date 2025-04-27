@@ -1,0 +1,136 @@
+camera:
+  look_from:
+    x: 0.0
+    y: 2.5
+    z: 5.0
+  look_at:
+    x: 0.0
+    y: 0.0
+    z: -1.0
+  vup:
+    x: 0.0
+    y: 1.0
+    z: 0.0
+  vfov: 40.0
+  aspect_ratio: 1.7777777777777777
+  aperture: 0.0625  # f/16に相当
+  focus_dist: 5.0   # lookfrom - lookatの距離
+
+objects:
+  # 地面
+  - shape:
+      type: Sphere
+      center:
+        x: 0.0
+        y: -100.5
+        z: -1.0
+      radius: 100.0
+    material:
+      type: Lambertian
+      albedo:
+        x: 0.5
+        y: 0.5
+        z: 0.5
+
+  # 中央の拡散球
+  - shape:
+      type: Sphere
+      center:
+        x: 0.0
+        y: 0.0
+        z: -1.0
+      radius: 0.5
+    material:
+      type: Lambertian
+      albedo:
+        x: 0.7
+        y: 0.3
+        z: 0.3
+
+  # ガラス球（外側）
+  - shape:
+      type: Sphere
+      center:
+        x: -1.0
+        y: 0.0
+        z: -1.0
+      radius: 0.5
+    material:
+      type: Dielectric
+      ir: 1.5
+
+  # ガラス球（内側 - 中空を表現）
+  - shape:
+      type: Sphere
+      center:
+        x: -1.0
+        y: 0.0
+        z: -1.0
+      radius: -0.45
+    material:
+      type: Dielectric
+      ir: 1.5
+
+  # 完全な鏡面の球
+  - shape:
+      type: Sphere
+      center:
+        x: -2.0
+        y: 0.0
+        z: -2.0
+      radius: 0.5
+    material:
+      type: Metal
+      albedo:
+        x: 0.95
+        y: 0.95
+        z: 0.95
+      fuzz: 0.0
+
+  # ブラシドアルミの球
+  - shape:
+      type: Sphere
+      center:
+        x: -0.7
+        y: 0.0
+        z: -2.0
+      radius: 0.5
+    material:
+      type: Metal
+      albedo:
+        x: 0.7
+        y: 0.7
+        z: 0.7
+      fuzz: 0.3
+
+  # 金の球
+  - shape:
+      type: Sphere
+      center:
+        x: 0.7
+        y: 0.0
+        z: -2.0
+      radius: 0.5
+    material:
+      type: Metal
+      albedo:
+        x: 0.8
+        y: 0.6
+        z: 0.2
+      fuzz: 0.1
+
+  # メタリックプラスチックの球
+  - shape:
+      type: Sphere
+      center:
+        x: 2.0
+        y: 0.0
+        z: -2.0
+      radius: 0.5
+    material:
+      type: Metal
+      albedo:
+        x: 0.6
+        y: 0.2
+        z: 0.2
+      fuzz: 0.2

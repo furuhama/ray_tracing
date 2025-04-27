@@ -2,32 +2,26 @@ mod aabb;
 mod bvh;
 mod camera;
 mod image;
+mod material;
+mod object;
 mod ray;
+mod scene;
 mod types;
 mod vec3_glam;
 
-use camera::Camera;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use rand::prelude::*;
-use rayon::prelude::*;
+use std::env;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-mod material {
-    pub mod dielectric;
-    pub mod lambertian;
-    pub mod metal;
-}
-
-mod object {
-    pub mod list;
-    pub mod sphere;
-}
-
-use material::{dielectric::Dielectric, lambertian::Lambertian, metal::Metal};
-use object::{list::HittableList, sphere::Sphere};
+use camera::Camera;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use material::{Dielectric, Lambertian, Metal};
+use object::{HittableList, Sphere};
+use rand::prelude::*;
 use ray::Ray;
-use std::sync::Arc;
-use types::Hittable;
+use rayon::prelude::*;
+use scene::{MaterialConfig, Scene, ShapeConfig};
+use types::{Hittable, Material};
 use vec3_glam::{ColorGlam, Vec3Glam};
 
 fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> ColorGlam {
@@ -48,7 +42,40 @@ fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> ColorGlam {
     ColorGlam::new(1.0, 1.0, 1.0) * (1.0 - t) + ColorGlam::new(0.5, 0.7, 1.0) * t
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let scene_path = env::args()
+        .nth(1)
+        .unwrap_or_else(|| "scenes.yaml".to_string());
+
+    let scene = Scene::from_yaml_file(&scene_path)?;
+
+    // Convert scene config to actual scene objects
+    let camera = Arc::new(Camera::new(
+        scene.camera.look_from.into(),
+        scene.camera.look_at.into(),
+        scene.camera.vup.into(),
+        scene.camera.vfov,
+        scene.camera.aspect_ratio,
+        scene.camera.aperture,
+        scene.camera.focus_dist,
+    ));
+
+    let mut world = HittableList::new();
+
+    for obj in scene.objects {
+        let material: Arc<dyn Material> = match obj.material {
+            MaterialConfig::Lambertian { albedo } => Arc::new(Lambertian::new(albedo.into())),
+            MaterialConfig::Metal { albedo, fuzz } => Arc::new(Metal::new(albedo.into(), fuzz)),
+            MaterialConfig::Dielectric { ir } => Arc::new(Dielectric::new(ir)),
+        };
+
+        match obj.shape {
+            ShapeConfig::Sphere { center, radius } => {
+                world.add(Arc::new(Sphere::new(center.into(), radius, material)));
+            }
+        }
+    }
+
     // 画像の基本設定
     let aspect_ratio = 16.0 / 9.0;
     let image_width = 800;
@@ -58,113 +85,8 @@ fn main() {
     // レンダリングの設定
     let max_depth = 50; // 反射の最大回数
 
-    // マテリアルの設定
-    let material_ground = Arc::new(Lambertian::new(ColorGlam::new(0.5, 0.5, 0.5))); // グレーの地面
-    let material_center = Arc::new(Lambertian::new(ColorGlam::new(0.7, 0.3, 0.3))); // 赤みがかった拡散面
-    let glass = Arc::new(Dielectric::new(1.5)); // ガラス（屈折率1.5）
-
-    // 様々な金属マテリアルの作成
-    let mirror = Arc::new(Metal::with_params(
-        ColorGlam::new(0.95, 0.95, 0.95), // 銀色
-        0.0,                              // 完全な鏡面
-        0.98,                             // 非常に高い反射率
-        1.0,                              // 完全な金属
-    ));
-
-    let brushed_aluminum = Arc::new(Metal::with_params(
-        ColorGlam::new(0.7, 0.7, 0.7), // アルミニウム色
-        0.3,                           // 中程度の粗さ
-        0.85,                          // 高めの反射率
-        0.9,                           // 高い金属性
-    ));
-
-    let gold = Arc::new(Metal::with_params(
-        ColorGlam::new(0.8, 0.6, 0.2), // 金色
-        0.1,                           // 低めの粗さ
-        0.95,                          // 高い反射率
-        0.8,                           // 高い金属性
-    ));
-
-    let metallic_plastic = Arc::new(Metal::with_params(
-        ColorGlam::new(0.6, 0.2, 0.2), // 赤みがかった色
-        0.2,                           // 低めの粗さ
-        0.7,                           // 中程度の反射率
-        0.5,                           // 中程度の金属性
-    ));
-
-    // シーンの作成
-    let mut world = HittableList::new();
-
-    // 地面の追加
-    world.add(Arc::new(Sphere::new(
-        Vec3Glam::new(0.0, -100.5, -1.0),
-        100.0,
-        material_ground,
-    )));
-
-    // 中央の拡散球
-    world.add(Arc::new(Sphere::new(
-        Vec3Glam::new(0.0, 0.0, -1.0),
-        0.5,
-        material_center,
-    )));
-
-    // ガラス球（二重球で中空ガラス球を表現）
-    world.add(Arc::new(Sphere::new(
-        Vec3Glam::new(-1.0, 0.0, -1.0),
-        0.5,
-        glass.clone(),
-    ))); // 外側のガラス球
-    world.add(Arc::new(Sphere::new(
-        Vec3Glam::new(-1.0, 0.0, -1.0),
-        -0.45, // 負の半径で内側の球を作成
-        glass,
-    ))); // 内側のガラス球
-
-    // 金属球体の配置（後方に配置）
-    world.add(Arc::new(Sphere::new(
-        Vec3Glam::new(-2.0, 0.0, -2.0),
-        0.5,
-        mirror,
-    ))); // 鏡面の球
-
-    world.add(Arc::new(Sphere::new(
-        Vec3Glam::new(-0.7, 0.0, -2.0),
-        0.5,
-        brushed_aluminum,
-    ))); // ブラシドアルミの球
-
-    world.add(Arc::new(Sphere::new(
-        Vec3Glam::new(0.7, 0.0, -2.0),
-        0.5,
-        gold,
-    ))); // 金の球
-
-    world.add(Arc::new(Sphere::new(
-        Vec3Glam::new(2.0, 0.0, -2.0),
-        0.5,
-        metallic_plastic,
-    ))); // メタリックプラスチックの球
-
     // BVHを構築してシーンを最適化
     let world = world.optimize();
-
-    // カメラの設定
-    let lookfrom = Vec3Glam::new(0.0, 2.5, 5.0);
-    let lookat = Vec3Glam::new(0.0, 0.0, -1.0);
-    let vup = Vec3Glam::new(0.0, 1.0, 0.0);
-    let focus_dist = Some((lookfrom - lookat).length());
-    let aperture = Camera::aperture_from_f_number(16.0);
-
-    let camera = Arc::new(camera::Camera::new(
-        lookfrom,
-        lookat,
-        vup,
-        40.0,
-        aspect_ratio,
-        aperture,
-        focus_dist,
-    ));
 
     // プログレス表示の設定
     let multi_progress = MultiProgress::new();
@@ -219,4 +141,6 @@ fn main() {
         eprintln!("Error writing image: {}", e);
     }
     println!("完了！");
+
+    Ok(())
 }
