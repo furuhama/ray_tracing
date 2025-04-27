@@ -1,7 +1,25 @@
-use ray_tracing::{
-    Color, Dielectric, Hittable, HittableList, Lambertian, Metal, Ray, Sphere, Vec3, image,
-};
+mod image;
+mod ray;
+mod types;
+mod vec3;
+
+mod material {
+    pub mod dielectric;
+    pub mod lambertian;
+    pub mod metal;
+}
+
+mod object {
+    pub mod list;
+    pub mod sphere;
+}
+
+use material::{dielectric::Dielectric, lambertian::Lambertian, metal::Metal};
+use object::{list::HittableList, sphere::Sphere};
+use ray::Ray;
 use std::sync::Arc;
+use types::Hittable;
+use vec3::{Color, Vec3};
 
 fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> Color {
     // 反射回数が制限を超えた場合は黒を返す
