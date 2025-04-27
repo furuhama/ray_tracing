@@ -8,5 +8,6 @@ name = "ray_tracing"
 path = "src/main.rs"
 
 [dependencies]
+indicatif = "0.17.11"
 rand = "0.8.5"
 rayon = "1.10.0"
