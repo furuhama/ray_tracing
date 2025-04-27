@@ -1,6 +1,6 @@
 # Ray Tracing in Rust
 
-This is a ray tracing renderer implemented in Rust, based on "Ray Tracing in One Weekend" series.
+This is a ray tracing renderer implemented in Rust.
 
 ## Features
 
@@ -19,7 +19,11 @@ This is a ray tracing renderer implemented in Rust, based on "Ray Tracing in One
 To render the default scene:
 
 ```bash
-cargo run
+make # Use release build and much faster
+
+# or
+
+cargo run # Use debug build
 ```
 
 This will generate an `output.ppm` file containing the rendered image.
