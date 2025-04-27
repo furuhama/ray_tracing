@@ -46,69 +46,117 @@ fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> Color {
 fn main() {
     // 画像の基本設定
     let aspect_ratio = 16.0 / 9.0;
-    let image_width = 400;
+    let image_width = 800;
     let image_height = (image_width as f64 / aspect_ratio) as u32;
-    let samples_per_pixel = 100; // アンチエイリアシング用のサンプル数
+    let samples_per_pixel = 200; // より多くのサンプル数で画質向上
 
     // レンダリングの設定
     let max_depth = 50; // 反射の最大回数
 
-    // カメラの設定
-    let lookfrom = Vec3::new(3.0, 3.0, 2.0);
-    let lookat = Vec3::new(0.0, 0.0, -1.0);
-    let vup = Vec3::new(0.0, 1.0, 0.0);
+    // マテリアルの設定
+    let material_ground = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5))); // グレーの地面
+    let material_center = Arc::new(Lambertian::new(Color::new(0.7, 0.3, 0.3))); // 赤みがかった拡散面
+    let glass = Arc::new(Dielectric::new(1.5)); // ガラス（屈折率1.5）
 
-    // シーンの主要なオブジェクトまでの距離に焦点を合わせる
-    let focus_dist = Some((lookfrom - lookat).length()); // 自動的に主要な被写体までの距離を計算
+    // 様々な金属マテリアルの作成
+    let mirror = Arc::new(Metal::with_params(
+        Color::new(0.95, 0.95, 0.95), // 銀色
+        0.0,                          // 完全な鏡面
+        0.98,                         // 非常に高い反射率
+        1.0,                          // 完全な金属
+    ));
 
-    // 絞りを絞って被写界深度を深くする
-    let aperture = Camera::aperture_from_f_number(8.0); // f/8.0に変更（より小さな開口）
+    let brushed_aluminum = Arc::new(Metal::with_params(
+        Color::new(0.7, 0.7, 0.7), // アルミニウム色
+        0.3,                       // 中程度の粗さ
+        0.85,                      // 高めの反射率
+        0.9,                       // 高い金属性
+    ));
 
-    let camera = camera::Camera::new(
-        lookfrom,     // カメラの位置
-        lookat,       // 注視点
-        vup,          // 上方向ベクトル
-        20.0,         // 視野角（度）
-        aspect_ratio, // アスペクト比
-        aperture,     // 絞り値
-        focus_dist,   // 焦点距離
-    );
+    let gold = Arc::new(Metal::with_params(
+        Color::new(0.8, 0.6, 0.2), // 金色
+        0.1,                       // 低めの粗さ
+        0.95,                      // 高い反射率
+        0.8,                       // 高い金属性
+    ));
+
+    let metallic_plastic = Arc::new(Metal::with_params(
+        Color::new(0.6, 0.2, 0.2), // 赤みがかった色
+        0.2,                       // 低めの粗さ
+        0.7,                       // 中程度の反射率
+        0.5,                       // 中程度の金属性
+    ));
 
     // シーンの作成
     let mut world = HittableList::new();
 
-    // マテリアルの設定
-    let material_ground = Arc::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
-    let material_center = Arc::new(Lambertian::new(Color::new(0.7, 0.3, 0.3)));
-    let material_left = Arc::new(Dielectric::new(1.5)); // ガラス（屈折率1.5）
-    let material_right = Arc::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
-
-    // オブジェクトの追加
+    // 地面の追加
     world.add(Box::new(Sphere::new(
         Vec3::new(0.0, -100.5, -1.0),
         100.0,
         material_ground,
-    ))); // 地面
+    )));
+
+    // 中央の拡散球
     world.add(Box::new(Sphere::new(
         Vec3::new(0.0, 0.0, -1.0),
         0.5,
         material_center,
-    ))); // 中央の球
+    )));
+
+    // ガラス球（二重球で中空ガラス球を表現）
     world.add(Box::new(Sphere::new(
         Vec3::new(-1.0, 0.0, -1.0),
         0.5,
-        material_left.clone(),
+        glass.clone(),
     ))); // 外側のガラス球
     world.add(Box::new(Sphere::new(
         Vec3::new(-1.0, 0.0, -1.0),
         -0.45, // 負の半径で内側の球を作成
-        material_left,
+        glass,
     ))); // 内側のガラス球
+
+    // 金属球体の配置（後方に配置）
     world.add(Box::new(Sphere::new(
-        Vec3::new(1.0, 0.0, -1.0),
+        Vec3::new(-2.0, 0.0, -2.0),
         0.5,
-        material_right,
-    ))); // 右の球
+        mirror,
+    ))); // 鏡面の球
+
+    world.add(Box::new(Sphere::new(
+        Vec3::new(-0.7, 0.0, -2.0),
+        0.5,
+        brushed_aluminum,
+    ))); // ブラシドアルミの球
+
+    world.add(Box::new(Sphere::new(Vec3::new(0.7, 0.0, -2.0), 0.5, gold))); // 金の球
+
+    world.add(Box::new(Sphere::new(
+        Vec3::new(2.0, 0.0, -2.0),
+        0.5,
+        metallic_plastic,
+    ))); // メタリックプラスチックの球
+
+    // カメラの設定
+    let lookfrom = Vec3::new(0.0, 2.5, 5.0); // より遠くから、より高い位置
+    let lookat = Vec3::new(0.0, 0.0, -1.0); // シーンの中心を見る
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+
+    // シーンの主要なオブジェクトまでの距離に焦点を合わせる
+    let focus_dist = Some((lookfrom - lookat).length());
+
+    // より広い被写界深度のために絞りを絞る
+    let aperture = Camera::aperture_from_f_number(16.0); // f/16でより深い被写界深度
+
+    let camera = camera::Camera::new(
+        lookfrom,
+        lookat,
+        vup,
+        40.0, // より広い視野角
+        aspect_ratio,
+        aperture,
+        focus_dist,
+    );
 
     // 画像の生成
     let mut pixels = Vec::with_capacity((image_width * image_height) as usize);
