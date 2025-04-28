@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Scene {
     pub camera: CameraConfig,
     pub objects: Vec<ObjectConfig>,
+    pub volumetric: Option<VolumetricConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,6 +50,12 @@ pub enum MaterialConfig {
     Lambertian { albedo: Vec3Config },
     Metal { albedo: Vec3Config, fuzz: f64 },
     Dielectric { ir: f64 },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum VolumetricConfig {
+    UniformFog { color: Vec3Config, density: f64 },
 }
 
 impl Scene {

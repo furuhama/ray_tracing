@@ -1,0 +1,224 @@
+camera:
+  look_from:
+    x: 3.0
+    y: 4.0
+    z: 5.0
+  look_at:
+    x: 0.0
+    y: 0.0
+    z: -1.0
+  vup:
+    x: 0.0
+    y: 1.0
+    z: 0.0
+  vfov: 35.0  # より広い視野角で全体を捉える
+  aspect_ratio: 1.7777777777777777
+  aperture: 0.05  # より大きな被写界深度のために絞りを絞る
+  focus_dist: 7.81  # カメラ位置から注視点までの正確な距離
+
+objects:
+  # 地面
+  - shape:
+      type: Sphere
+      center:
+        x: 0.0
+        y: -100.5
+        z: -1.0
+      radius: 100.0
+    material:
+      type: Lambertian
+      albedo:
+        x: 0.5
+        y: 0.5
+        z: 0.5
+
+  # 中央の拡散球
+  - shape:
+      type: Sphere
+      center:
+        x: 0.0
+        y: 0.0
+        z: -1.0
+      radius: 0.5
+    material:
+      type: Lambertian
+      albedo:
+        x: 0.7
+        y: 0.3
+        z: 0.3
+
+  # 入れ子ガラス球セット1（大）
+  - shape:
+      type: Sphere
+      center:
+        x: -1.0
+        y: 0.0
+        z: -1.0
+      radius: 0.5
+    material:
+      type: Dielectric
+      ir: 1.5
+
+  - shape:
+      type: Sphere
+      center:
+        x: -1.0
+        y: 0.0
+        z: -1.0
+      radius: -0.45
+    material:
+      type: Dielectric
+      ir: 1.5
+
+  # 入れ子ガラス球セット1の内側にさらに小さなガラス球
+  - shape:
+      type: Sphere
+      center:
+        x: -1.0
+        y: 0.0
+        z: -1.0
+      radius: 0.2
+    material:
+      type: Dielectric
+      ir: 1.7  # 異なる屈折率を設定
+
+  # 完全な鏡面の球
+  - shape:
+      type: Sphere
+      center:
+        x: -2.0
+        y: 0.0
+        z: -2.0
+      radius: 0.5
+    material:
+      type: Metal
+      albedo:
+        x: 0.95
+        y: 0.95
+        z: 0.95
+      fuzz: 0.0
+
+  # ブラシドアルミの球
+  - shape:
+      type: Sphere
+      center:
+        x: -0.7
+        y: 0.0
+        z: -2.0
+      radius: 0.5
+    material:
+      type: Metal
+      albedo:
+        x: 0.7
+        y: 0.7
+        z: 0.7
+      fuzz: 0.3
+
+  # 金の球
+  - shape:
+      type: Sphere
+      center:
+        x: 0.7
+        y: 0.0
+        z: -2.0
+      radius: 0.5
+    material:
+      type: Metal
+      albedo:
+        x: 0.8
+        y: 0.6
+        z: 0.2
+      fuzz: 0.1
+
+  # メタリックプラスチックの球
+  - shape:
+      type: Sphere
+      center:
+        x: 2.0
+        y: 0.0
+        z: -2.0
+      radius: 0.5
+    material:
+      type: Metal
+      albedo:
+        x: 0.6
+        y: 0.2
+        z: 0.2
+      fuzz: 0.2
+
+  # 新しい入れ子ガラス球セット2（小）
+  - shape:
+      type: Sphere
+      center:
+        x: 1.0
+        y: -0.2
+        z: -0.5
+      radius: 0.3
+    material:
+      type: Dielectric
+      ir: 1.5
+
+  - shape:
+      type: Sphere
+      center:
+        x: 1.0
+        y: -0.2
+        z: -0.5
+      radius: -0.25
+    material:
+      type: Dielectric
+      ir: 1.5
+
+  # 大きな青い拡散球
+  - shape:
+      type: Sphere
+      center:
+        x: -2.5
+        y: 1.0
+        z: -3.0
+      radius: 1.0
+    material:
+      type: Lambertian
+      albedo:
+        x: 0.2
+        y: 0.3
+        z: 0.8
+
+  # 小さな銅の球
+  - shape:
+      type: Sphere
+      center:
+        x: 0.3
+        y: -0.3
+        z: -0.7
+      radius: 0.2
+    material:
+      type: Metal
+      albedo:
+        x: 0.8
+        y: 0.5
+        z: 0.3
+      fuzz: 0.1
+
+  # 小さな緑の拡散球
+  - shape:
+      type: Sphere
+      center:
+        x: -0.4
+        y: -0.3
+        z: -0.5
+      radius: 0.2
+    material:
+      type: Lambertian
+      albedo:
+        x: 0.2
+        y: 0.8
+        z: 0.3
+
+volumetric:
+  type: UniformFog
+  color:
+    x: 0.5
+    y: 0.5
+    z: 0.5
+  density: 0.02

@@ -8,11 +8,13 @@ mod ray;
 mod scene;
 mod types;
 mod vec3_glam;
+mod volumetric;
 
 use std::env;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::volumetric::{VolumetricMedium, fog::UniformFog};
 use camera::Camera;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use material::{Dielectric, Lambertian, Metal};
@@ -20,32 +22,55 @@ use object::{HittableList, Sphere};
 use rand::prelude::*;
 use ray::Ray;
 use rayon::prelude::*;
-use scene::{MaterialConfig, Scene, ShapeConfig};
+use scene::{MaterialConfig, Scene, ShapeConfig, VolumetricConfig};
 use types::{Hittable, Material};
 use vec3_glam::ColorGlam;
 
-fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> ColorGlam {
+fn ray_color(
+    ray: &Ray,
+    world: &impl Hittable,
+    volumetric: Option<&dyn VolumetricMedium>,
+    depth: i32,
+) -> ColorGlam {
     // 反射回数が制限を超えた場合は黒を返す
     if depth <= 0 {
         return ColorGlam::new(0.0, 0.0, 0.0);
     }
 
     if let Some(rec) = world.hit(ray, 0.001, f64::INFINITY) {
+        let mut color = ColorGlam::new(0.0, 0.0, 0.0);
+
         if let Some(scatter) = rec.material.scatter(ray, &rec) {
-            return scatter.attenuation * ray_color(&scatter.scattered, world, depth - 1);
+            color =
+                scatter.attenuation * ray_color(&scatter.scattered, world, volumetric, depth - 1);
         }
-        return ColorGlam::new(0.0, 0.0, 0.0);
+
+        // ボリューメトリック効果の適用
+        if let Some(medium) = volumetric {
+            let (scattered_light, transmittance) = medium.sample(ray, 0.0, rec.t);
+            color = color * transmittance + scattered_light;
+        }
+
+        return color;
     }
 
     let unit_direction = ray.direction().unit_vector();
     let t = 0.5 * (unit_direction.y() + 1.0);
-    ColorGlam::new(1.0, 1.0, 1.0) * (1.0 - t) + ColorGlam::new(0.5, 0.7, 1.0) * t
+    let background = ColorGlam::new(1.0, 1.0, 1.0) * (1.0 - t) + ColorGlam::new(0.5, 0.7, 1.0) * t;
+
+    // 背景色にもボリューメトリック効果を適用
+    if let Some(medium) = volumetric {
+        let (scattered_light, transmittance) = medium.sample(ray, 0.0, 1000.0); // 十分な距離
+        background * transmittance + scattered_light
+    } else {
+        background
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let scene_path = env::args()
         .nth(1)
-        .unwrap_or_else(|| "scenes.yaml".to_string());
+        .unwrap_or_else(|| "scenes/default.yaml".to_string());
 
     let scene = Scene::from_yaml_file(&scene_path)?;
 
@@ -75,6 +100,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+
+    // ボリューメトリック効果の設定
+    let volumetric: Option<Arc<Box<dyn VolumetricMedium>>> =
+        scene.volumetric.map(|config| match config {
+            VolumetricConfig::UniformFog { color, density } => {
+                Arc::new(
+                    Box::new(UniformFog::new(color.into(), density)) as Box<dyn VolumetricMedium>
+                )
+            }
+        });
 
     // 画像の基本設定
     let aspect_ratio = 16.0 / 9.0;
@@ -108,6 +143,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .flat_map(|j| {
             let camera = Arc::clone(&camera);
             let world = Arc::clone(&world);
+            let volumetric = volumetric.clone();
             let completed_pixels = Arc::clone(&completed_pixels);
             let total_progress = Arc::clone(&total_progress);
 
@@ -121,7 +157,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let v = (j as f64 + rng.gen_range(0.0..1.0)) / (image_height - 1) as f64;
 
                     let ray = camera.get_ray(u, v);
-                    pixel_color = pixel_color + ray_color(&ray, &world, max_depth);
+                    pixel_color = pixel_color
+                        + ray_color(
+                            &ray,
+                            &world,
+                            volumetric.as_deref().map(|v| v.as_ref()),
+                            max_depth,
+                        );
                 }
 
                 // プログレスバーの更新
